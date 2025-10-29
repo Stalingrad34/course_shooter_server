@@ -1,7 +1,17 @@
 import { Room, Client } from "colyseus";
 import { Schema, type, MapSchema } from "@colyseus/schema";
 
+class Vector2 {
+    x: number;
+    z: number;
+}
+
+const SPAWN_POINTS: Vector2[] = [{x:10, z:10}, {x:-10, z:10}, {x:10, z:-10}, {x:-10, z:-10}]
+
 export class Player extends Schema {
+    @type("uint16")
+    weapon = 0;
+    
     @type("uint16")
     loss = 0;
 
@@ -15,13 +25,13 @@ export class Player extends Schema {
     speed = 0;
     
     @type("number")
-    pX = Math.floor(Math.random() * 50) - 25;
+    pX = 0;
 
     @type("number")
     pY = 0;
 
     @type("number")
-    pZ = Math.floor(Math.random() * 50) - 25;
+    pZ = 0;
 
     @type("number")
     vX = 0;
@@ -53,6 +63,11 @@ export class State extends Schema {
         player.speed = data.speed;
         player.health = data.health;
         player.currentHealth = data.health;
+        player.weapon = data.weapon;
+
+        const spawnPosition = SPAWN_POINTS[this.players.size]
+        player.pX = spawnPosition.x;
+        player.pZ = spawnPosition.z;
 
         this.players.set(sessionId, player);
     }
@@ -73,6 +88,11 @@ export class State extends Schema {
         player.rY = data.rY;
         player.cr = data.cr;
     }
+
+    changeWeaponPlayer (sessionId: string, data: any) {
+        const player = this.players.get(sessionId);
+        player.weapon = data.weapon;
+    }
 }
 
 export class StateHandlerRoom extends Room<State> {
@@ -85,6 +105,10 @@ export class StateHandlerRoom extends Room<State> {
 
         this.onMessage("move", (client, data) => {
             this.state.movePlayer(client.sessionId, data);
+        });
+
+        this.onMessage("weapon", (client, data) => {
+            this.state.changeWeaponPlayer(client.sessionId, data);
         });
 
         this.onMessage("shoot", (client, data) => {
@@ -100,9 +124,11 @@ export class StateHandlerRoom extends Room<State> {
                 player.currentHealth = hp;
                 return;
             }
-            
-            const x = Math.floor(Math.random() * 50) - 25;
-            const z = Math.floor(Math.random() * 50) - 25;
+
+            const rndIndex = Math.floor(Math.random() * SPAWN_POINTS.length);
+            const spawnPosition = SPAWN_POINTS[rndIndex];
+            const x = spawnPosition.x;
+            const z = spawnPosition.z;
 
             player.loss++;
             player.currentHealth = player.health;
