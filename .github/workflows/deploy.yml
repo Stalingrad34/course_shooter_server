@@ -9,20 +9,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.KEY }}" > ~/.ssh/key
-          chmod 600 ~/.ssh/key
-          ssh-keyscan -H 194.226.139.113 >> ~/.ssh/known_hosts
-          
-      - name: Test SSH connection
-        run: |
-          ssh -i ~/.ssh/key -o BatchMode=yes -o ConnectTimeout=30 root@194.226.139.113 "echo 'SSH connection successful'"
-          
-      - name: Deploy files
-        run: |
-          cd colyseus-examples/src
-          rsync -avz -e "ssh -i ~/.ssh/key -o ConnectTimeout=30" --delete ./ root@194.226.139.113:/root/Shooter/src/
+      - uses: actions/checkout@v2
+      # Setup key
+      - run: set -eu
+      - run: mkdir "$HOME/.ssh"
+      - run: echo "${{ secrets.key }}" > "$HOME/.ssh/key"
+      - run: chmod 600 "$HOME/.ssh/key"
+      # Deploy
+      - run: cd src && rsync -azvhPL -e "ssh -p 22 -i $HOME/.ssh/key -o StrictHostKeyChecking=no" --archive --compress --delete . root@194.226.139.113:/root/Shooter/src
